@@ -1,6 +1,6 @@
 // The Excuse an Agent Gives After It Loses — make.fun one-liner entry.
 // Writes the director-chosen excuse to MAKEFUN_OUTPUT_DIR/entry.txt.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const LINE =
@@ -13,5 +13,19 @@ if (!outDir) {
 }
 
 mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, "entry.txt"), LINE + "\n", "utf8");
-console.log("wrote entry.txt");
+const entryPath = join(outDir, "entry.txt");
+writeFileSync(entryPath, LINE + "\n", "utf8");
+
+// Read-back validation: the file on disk must be byte-identical to the
+// chosen line, 1-200 characters, a single line, and not only whitespace.
+const back = readFileSync(entryPath, "utf8");
+const text = back.endsWith("\n") ? back.slice(0, -1) : back;
+if (text !== LINE) {
+  console.error("read-back mismatch: entry.txt does not match the chosen line");
+  process.exit(1);
+}
+if (text.length < 1 || text.length > 200 || text.includes("\n") || text.trim().length === 0) {
+  console.error("read-back failed: entry.txt is outside the 1-200 character single-line gate");
+  process.exit(1);
+}
+console.log(`wrote entry.txt (${text.length} chars, read-back verified)`);
